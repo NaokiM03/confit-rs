@@ -6,18 +6,13 @@ pub enum Extension {
     Json,
 }
 
-impl Default for Extension {
-    fn default() -> Self {
-        Extension::Json
-    }
-}
-
 impl Display for Extension {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
+                #[cfg(feature = "ext_json")]
                 Extension::Json => "json",
             }
         )

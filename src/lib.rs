@@ -17,11 +17,27 @@ fn app_config_dir(app_name: &str) -> Result<PathBuf> {
     Ok(app_config_dir)
 }
 
-fn config_file(app_config_dir: &Path, file_name: &str, extension: Extension) -> Result<PathBuf> {
+fn config_file(app_config_dir: &Path, file_name: &str, extension: &Extension) -> Result<PathBuf> {
     let config_file = format!("{file_name}.{extension}");
     let config_file = app_config_dir.join(config_file);
 
     Ok(config_file)
+}
+
+fn serialize<T: Serialize>(config: &T, extension: &Extension) -> Result<String> {
+    let config = match extension {
+        #[cfg(feature = "ext_json")]
+        Extension::Json => serde_json::to_string_pretty(&config)?,
+    };
+    Ok(config)
+}
+
+fn deserialize<T: DeserializeOwned>(config: &str, extension: &Extension) -> Result<T> {
+    let config = match extension {
+        #[cfg(feature = "ext_json")]
+        Extension::Json => serde_json::from_str(&config)?,
+    };
+    Ok(config)
 }
 
 pub fn load_or_init<T: Serialize + DeserializeOwned + Default>(
@@ -30,17 +46,17 @@ pub fn load_or_init<T: Serialize + DeserializeOwned + Default>(
     extension: Extension,
 ) -> Result<T> {
     let app_config_dir = app_config_dir(app_name)?;
-    let config_file = config_file(&app_config_dir, file_name, extension)?;
+    let config_file = config_file(&app_config_dir, file_name, &extension)?;
 
     let config = if config_file.exists() {
         let config = fs::read_to_string(config_file)?;
-        serde_json::from_str(&config)?
+        deserialize(&config, &extension)?
     } else {
         fs::create_dir_all(&app_config_dir)?;
 
         let config = T::default();
         {
-            let config = serde_json::to_string(&config)?;
+            let config = serialize(&config, &extension)?;
             fs::write(config_file, config)?;
         }
 
@@ -57,9 +73,9 @@ pub fn store<T: Serialize>(
     config: T,
 ) -> Result<()> {
     let app_config_dir = app_config_dir(app_name)?;
-    let config_file = config_file(&app_config_dir, file_name, extension)?;
+    let config_file = config_file(&app_config_dir, file_name, &extension)?;
 
-    let config = serde_json::to_string(&config)?;
+    let config = serialize(&config, &extension)?;
 
     fs::create_dir_all(&app_config_dir)?;
     fs::write(config_file, config)?;
@@ -67,83 +83,80 @@ pub fn store<T: Serialize>(
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
 
-//     use serde::{Deserialize, Serialize};
+    use super::*;
 
-//     #[derive(Debug, Serialize, Deserialize, Default, PartialEq)]
-//     struct Config {
-//         foo: String,
-//     }
+    #[derive(Debug, Serialize, Deserialize, Default, PartialEq)]
+    struct Config {
+        a: String,
+        b: u64,
+        c: bool,
+        d: Vec<String>,
+    }
 
-//     #[derive(Debug, Serialize, Deserialize, Default, PartialEq)]
-//     struct Theme {
-//         bar: String,
-//     }
+    impl Config {
+        fn create_test_data() -> Self {
+            Config {
+                a: "str".to_owned(),
+                b: 42,
+                c: true,
+                d: vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()],
+            }
+        }
+    }
 
-//     const APP_NAME: &str = "confit";
+    mod serialize {
+        use super::*;
 
-//     #[test]
-//     fn test_load_or_init() -> Result<()> {
-//         let expect = Config {
-//             foo: String::default(),
-//         };
-//         let actual: Config = load_or_init(APP_NAME, "config", Extension::Json)?;
-//         assert_eq!(expect, actual);
+        #[cfg(feature = "ext_json")]
+        #[test]
+        fn json() -> Result<()> {
+            let config = Config::create_test_data();
+            let expect = "\
+{
+  \"a\": \"str\",
+  \"b\": 42,
+  \"c\": true,
+  \"d\": [
+    \"foo\",
+    \"bar\",
+    \"baz\"
+  ]
+}\
+";
+            let actual = serialize(&config, &Extension::Json)?;
+            assert_eq!(expect, actual);
 
-//         let expect = Theme {
-//             bar: String::default(),
-//         };
-//         let actual: Theme = load_or_init(APP_NAME, "theme", Extension::Json)?;
-//         assert_eq!(expect, actual);
+            Ok(())
+        }
+    }
 
-//         // {
-//         //     let app_config_dir = app_config_dir(APP_NAME)?;
+    mod deserialize {
+        use super::*;
 
-//         //     let config = config_file(&app_config_dir, "config", Extension::Json)?;
-//         //     let theme = config_file(&app_config_dir, "theme", Extension::Json)?;
+        #[cfg(feature = "ext_json")]
+        #[test]
+        fn json() -> Result<()> {
+            let config = "\
+{
+  \"a\": \"str\",
+  \"b\": 42,
+  \"c\": true,
+  \"d\": [
+    \"foo\",
+    \"bar\",
+    \"baz\"
+  ]
+}\
+";
+            let expect = Config::create_test_data();
+            let actual = deserialize(config, &Extension::Json)?;
+            assert_eq!(expect, actual);
 
-//         //     assert!(fs::remove_file(config).is_ok());
-//         //     assert!(fs::remove_file(theme).is_ok());
-//         // }
-
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_store() -> Result<()> {
-//         let config = Config {
-//             foo: String::default(),
-//         };
-
-//         store(APP_NAME, "config", Extension::Json, &config)?;
-
-//         let expect = config;
-//         let actual: Config = load_or_init(APP_NAME, "config", Extension::Json)?;
-//         assert_eq!(expect, actual);
-
-//         let theme = Theme {
-//             bar: String::default(),
-//         };
-
-//         store(APP_NAME, "theme", Extension::Json, &theme)?;
-
-//         let expect = theme;
-//         let actual: Theme = load_or_init(APP_NAME, "theme", Extension::Json)?;
-//         assert_eq!(expect, actual);
-
-//         // {
-//         //     let app_config_dir = app_config_dir(APP_NAME)?;
-
-//         //     let config = config_file(&app_config_dir, "config", Extension::Json)?;
-//         //     let theme = config_file(&app_config_dir, "theme", Extension::Json)?;
-
-//         //     assert!(fs::remove_file(config).is_ok());
-//         //     assert!(fs::remove_file(theme).is_ok());
-//         // }
-
-//         Ok(())
-//     }
-// }
+            Ok(())
+        }
+    }
+}
