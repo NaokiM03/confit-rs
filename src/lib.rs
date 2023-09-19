@@ -28,6 +28,15 @@ fn serialize<T: Serialize>(config: &T, extension: &Extension) -> Result<String> 
     let config = match extension {
         #[cfg(feature = "ext_json")]
         Extension::Json => serde_json::to_string_pretty(&config)?,
+        #[cfg(feature = "ext_ron")]
+        Extension::Ron => ron::ser::to_string_pretty(
+            &config,
+            ron::ser::PrettyConfig::default().new_line("\n".to_owned()),
+        )?,
+        #[cfg(feature = "ext_toml")]
+        Extension::Toml => toml::to_string_pretty(&config)?,
+        #[cfg(feature = "ext_yaml")]
+        Extension::Yaml => serde_yaml::to_string(&config)?,
     };
     Ok(config)
 }
@@ -36,6 +45,12 @@ fn deserialize<T: DeserializeOwned>(config: &str, extension: &Extension) -> Resu
     let config = match extension {
         #[cfg(feature = "ext_json")]
         Extension::Json => serde_json::from_str(&config)?,
+        #[cfg(feature = "ext_ron")]
+        Extension::Ron => ron::from_str(&config)?,
+        #[cfg(feature = "ext_toml")]
+        Extension::Toml => toml::from_str(&config)?,
+        #[cfg(feature = "ext_yaml")]
+        Extension::Yaml => serde_yaml::from_str(&config)?,
     };
     Ok(config)
 }
@@ -132,6 +147,67 @@ mod tests {
 
             Ok(())
         }
+
+        #[cfg(feature = "ext_ron")]
+        #[test]
+        fn ron() -> Result<()> {
+            let config = Config::create_test_data();
+            let expect = "\
+(
+    a: \"str\",
+    b: 42,
+    c: true,
+    d: [
+        \"foo\",
+        \"bar\",
+        \"baz\",
+    ],
+)\
+";
+            let actual = serialize(&config, &Extension::Ron)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
+
+        #[cfg(feature = "ext_toml")]
+        #[test]
+        fn toml() -> Result<()> {
+            let config = Config::create_test_data();
+            let expect = "\
+a = \"str\"
+b = 42
+c = true
+d = [
+    \"foo\",
+    \"bar\",
+    \"baz\",
+]
+";
+            let actual = serialize(&config, &Extension::Toml)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
+
+        #[cfg(feature = "ext_yaml")]
+        #[test]
+        fn yaml() -> Result<()> {
+            let config = Config::create_test_data();
+            let expect = "\
+a: str
+b: 42
+c: true
+d:
+- foo
+- bar
+- baz
+";
+            let actual = serialize(&config, &Extension::Yaml)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
     }
 
     mod deserialize {
@@ -154,6 +230,67 @@ mod tests {
 ";
             let expect = Config::create_test_data();
             let actual = deserialize(config, &Extension::Json)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
+
+        #[cfg(feature = "ext_ron")]
+        #[test]
+        fn ron() -> Result<()> {
+            let config = "\
+(
+    a: \"str\",
+    b: 42,
+    c: true,
+    d: [
+        \"foo\",
+        \"bar\",
+        \"baz\",
+    ],
+)\
+";
+            let expect = Config::create_test_data();
+            let actual = deserialize(config, &Extension::Ron)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
+
+        #[cfg(feature = "ext_toml")]
+        #[test]
+        fn toml() -> Result<()> {
+            let config = "\
+a = \"str\"
+b = 42
+c = true
+d = [
+    \"foo\",
+    \"bar\",
+    \"baz\",
+]
+";
+            let expect = Config::create_test_data();
+            let actual = deserialize(config, &Extension::Toml)?;
+            assert_eq!(expect, actual);
+
+            Ok(())
+        }
+
+        #[cfg(feature = "ext_yaml")]
+        #[test]
+        fn yaml() -> Result<()> {
+            let config = "\
+a: str
+b: 42
+c: true
+d:
+- foo
+- bar
+- baz
+";
+            let expect = Config::create_test_data();
+            let actual = deserialize(config, &Extension::Yaml)?;
             assert_eq!(expect, actual);
 
             Ok(())

@@ -4,6 +4,12 @@ use std::fmt::Display;
 pub enum Extension {
     #[cfg(feature = "ext_json")]
     Json,
+    #[cfg(feature = "ext_ron")]
+    Ron,
+    #[cfg(feature = "ext_toml")]
+    Toml,
+    #[cfg(feature = "ext_yaml")]
+    Yaml,
 }
 
 impl Display for Extension {
@@ -14,6 +20,12 @@ impl Display for Extension {
             match self {
                 #[cfg(feature = "ext_json")]
                 Extension::Json => "json",
+                #[cfg(feature = "ext_ron")]
+                Extension::Ron => "ron",
+                #[cfg(feature = "ext_toml")]
+                Extension::Toml => "toml",
+                #[cfg(feature = "ext_yaml")]
+                Extension::Yaml => "yaml",
             }
         )
     }
