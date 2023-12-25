@@ -58,20 +58,20 @@ fn deserialize<T: DeserializeOwned>(config: &str, extension: &Extension) -> Resu
 pub fn load_or_init<T: Serialize + DeserializeOwned + Default>(
     app_name: &str,
     file_name: &str,
-    extension: Extension,
+    extension: &Extension,
 ) -> Result<T> {
     let app_config_dir = app_config_dir(app_name)?;
-    let config_file = config_file(&app_config_dir, file_name, &extension)?;
+    let config_file = config_file(&app_config_dir, file_name, extension)?;
 
     let config = if config_file.exists() {
         let config = fs::read_to_string(config_file)?;
-        deserialize(&config, &extension)?
+        deserialize(&config, extension)?
     } else {
         fs::create_dir_all(&app_config_dir)?;
 
         let config = T::default();
         {
-            let config = serialize(&config, &extension)?;
+            let config = serialize(&config, extension)?;
             fs::write(config_file, config)?;
         }
 
@@ -84,13 +84,13 @@ pub fn load_or_init<T: Serialize + DeserializeOwned + Default>(
 pub fn store<T: Serialize>(
     app_name: &str,
     file_name: &str,
-    extension: Extension,
+    extension: &Extension,
     config: T,
 ) -> Result<()> {
     let app_config_dir = app_config_dir(app_name)?;
-    let config_file = config_file(&app_config_dir, file_name, &extension)?;
+    let config_file = config_file(&app_config_dir, file_name, extension)?;
 
-    let config = serialize(&config, &extension)?;
+    let config = serialize(&config, extension)?;
 
     fs::create_dir_all(&app_config_dir)?;
     fs::write(config_file, config)?;
