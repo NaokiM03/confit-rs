@@ -1,3 +1,6 @@
+#[cfg(not(windows))]
+compile_error!("`confit` is only available on Windows.");
+
 #[cfg(all(
     not(feature = "json"),
     not(feature = "ron"),
