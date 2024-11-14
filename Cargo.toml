@@ -19,7 +19,7 @@ toml = { version = "0.8.12", optional = true }
 serde_yaml = { version = "0.9.33", optional = true }
 
 [features]
-default = ["json"]
+default = []
 json = ["dep:serde_json"]
 ron = ["dep:ron"]
 toml = ["dep:toml"]
