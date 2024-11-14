@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.188", features = ["derive"] }
+serde = { version = "1.0.215", features = ["derive"] }
 thiserror = "2.0.3"
-windows = { version = "0.51.1", features = [
+windows = { version = "0.58.0", features = [
     "Win32_UI_Shell",
     "Win32_Foundation",
 ] }
@@ -20,6 +20,7 @@ serde_yaml = { version = "0.9.33", optional = true }
 
 [features]
 default = []
+
 json = ["dep:serde_json"]
 ron = ["dep:ron"]
 toml = ["dep:toml"]
