@@ -1,14 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-use thiserror::Error;
-
-use std::{fs, path::PathBuf};
-
-mod config_dir;
-mod extension;
-
-use config_dir::config_dir;
-pub use extension::Extension;
-
 #[cfg(all(
     not(feature = "json"),
     not(feature = "ron"),
@@ -20,44 +9,17 @@ compile_error!(
 Please enable `json`, `ron`, `toml` or `yaml`."
 );
 
-#[derive(Debug, Error)]
-pub enum ConfitError {
-    #[error("mising config dir")]
-    MissingConfigDir,
+use serde::{de::DeserializeOwned, Serialize};
 
-    #[cfg(feature = "json")]
-    #[error("{0}")]
-    FailedToSerializeJson(#[source] serde_json::Error),
-    #[cfg(feature = "ron")]
-    #[error("{0}")]
-    FailedToSerializeRon(#[source] ron::Error),
-    #[cfg(feature = "toml")]
-    #[error("{0}")]
-    FailedToSerializeToml(#[source] toml::ser::Error),
-    #[cfg(feature = "yaml")]
-    #[error("{0}")]
-    FailedToSerializeYaml(#[source] serde_yaml::Error),
+use std::{fs, path::PathBuf};
 
-    #[cfg(feature = "json")]
-    #[error("{0}")]
-    FailedToDeserializeJson(#[source] serde_json::Error),
-    #[cfg(feature = "ron")]
-    #[error("{0}")]
-    FailedToDeserializeRon(#[source] ron::de::SpannedError),
-    #[cfg(feature = "toml")]
-    #[error("{0}")]
-    FailedToDeserializeToml(#[source] toml::de::Error),
-    #[cfg(feature = "yaml")]
-    #[error("{0}")]
-    FailedToDeserializeYaml(#[source] serde_yaml::Error),
+mod config_dir;
+mod error;
+mod extension;
 
-    #[error("{0}")]
-    IoReadFile(#[source] std::io::Error),
-    #[error("{0}")]
-    IoCeateDir(#[source] std::io::Error),
-    #[error("{0}")]
-    IoWriteFile(#[source] std::io::Error),
-}
+use config_dir::config_dir;
+pub use error::ConfitError;
+pub use extension::Extension;
 
 fn config_file(
     app_name: &str,
@@ -74,7 +36,7 @@ fn serialize<T: Serialize>(config: &T, extension: Extension) -> Result<String, C
     match extension {
         #[cfg(feature = "json")]
         Extension::Json => {
-            serde_json::to_string_pretty(&config).map_err(ConfitError::FailedToSerializeJson)
+            serde_json::to_string_pretty(&config).map_err(ConfitError::SerializeJson)
         }
 
         #[cfg(feature = "ron")]
@@ -82,37 +44,29 @@ fn serialize<T: Serialize>(config: &T, extension: Extension) -> Result<String, C
             let option = ron::ser::PrettyConfig::default().new_line("\n".to_owned());
             ron::ser::to_string_pretty(&config, option)
         }
-        .map_err(ConfitError::FailedToSerializeRon),
+        .map_err(ConfitError::SerializeRon),
 
         #[cfg(feature = "toml")]
-        Extension::Toml => {
-            toml::to_string_pretty(&config).map_err(ConfitError::FailedToSerializeToml)
-        }
+        Extension::Toml => toml::to_string_pretty(&config).map_err(ConfitError::SerializeToml),
 
         #[cfg(feature = "yaml")]
-        Extension::Yaml => {
-            serde_yaml::to_string(&config).map_err(ConfitError::FailedToSerializeYaml)
-        }
+        Extension::Yaml => serde_yaml::to_string(&config).map_err(ConfitError::SerializeYaml),
     }
 }
 
 fn deserialize<T: DeserializeOwned>(config: &str, extension: Extension) -> Result<T, ConfitError> {
     match extension {
         #[cfg(feature = "json")]
-        Extension::Json => {
-            serde_json::from_str(config).map_err(ConfitError::FailedToDeserializeJson)
-        }
+        Extension::Json => serde_json::from_str(config).map_err(ConfitError::DeserializeJson),
 
         #[cfg(feature = "ron")]
-        Extension::Ron => ron::from_str(config).map_err(ConfitError::FailedToDeserializeRon),
+        Extension::Ron => ron::from_str(config).map_err(ConfitError::DeserializeRon),
 
         #[cfg(feature = "toml")]
-        Extension::Toml => toml::from_str(config).map_err(ConfitError::FailedToDeserializeToml),
+        Extension::Toml => toml::from_str(config).map_err(ConfitError::DeserializeToml),
 
         #[cfg(feature = "yaml")]
-        Extension::Yaml => {
-            serde_yaml::from_str(config).map_err(ConfitError::FailedToDeserializeYaml)
-        }
+        Extension::Yaml => serde_yaml::from_str(config).map_err(ConfitError::DeserializeYaml),
     }
 }
 
