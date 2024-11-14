@@ -2,13 +2,13 @@ use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum Extension {
-    #[cfg(feature = "ext_json")]
+    #[cfg(feature = "json")]
     Json,
-    #[cfg(feature = "ext_ron")]
+    #[cfg(feature = "ron")]
     Ron,
-    #[cfg(feature = "ext_toml")]
+    #[cfg(feature = "toml")]
     Toml,
-    #[cfg(feature = "ext_yaml")]
+    #[cfg(feature = "yaml")]
     Yaml,
 }
 
@@ -18,13 +18,13 @@ impl Display for Extension {
             f,
             "{}",
             match self {
-                #[cfg(feature = "ext_json")]
+                #[cfg(feature = "json")]
                 Extension::Json => "json",
-                #[cfg(feature = "ext_ron")]
+                #[cfg(feature = "ron")]
                 Extension::Ron => "ron",
-                #[cfg(feature = "ext_toml")]
+                #[cfg(feature = "toml")]
                 Extension::Toml => "toml",
-                #[cfg(feature = "ext_yaml")]
+                #[cfg(feature = "yaml")]
                 Extension::Yaml => "yaml",
             }
         )

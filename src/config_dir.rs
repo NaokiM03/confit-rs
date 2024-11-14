@@ -1,5 +1,7 @@
-use windows::Win32::Foundation::HANDLE;
-use windows::Win32::UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG};
+use windows::Win32::{
+    Foundation::HANDLE,
+    UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG},
+};
 
 use std::path::PathBuf;
 
